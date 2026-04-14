@@ -11,57 +11,39 @@ COLS=$(tput cols 2>/dev/null || echo 80)
 C_RESET='\033[0m'
 C_BOLD='\033[1m'
 C_DIM='\033[2m'
-C_ITALIC='\033[3m'
-C_UNDER='\033[4m'
-
 C_WHITE='\033[38;5;255m'
 C_SILVER='\033[38;5;251m'
 C_GRAY='\033[38;5;242m'
 C_DARKGRAY='\033[38;5;238m'
-
 C_BLUE='\033[38;5;33m'
 C_CYAN='\033[38;5;51m'
 C_TEAL='\033[38;5;43m'
 C_MINT='\033[38;5;121m'
 C_GREEN='\033[38;5;82m'
 C_LIME='\033[38;5;154m'
-
 C_PURPLE='\033[38;5;135m'
 C_VIOLET='\033[38;5;141m'
 C_PINK='\033[38;5;213m'
-C_ROSE='\033[38;5;204m'
 C_RED='\033[38;5;196m'
 C_ORANGE='\033[38;5;214m'
 C_YELLOW='\033[38;5;226m'
 C_GOLD='\033[38;5;220m'
-
-BG_DARK='\033[48;5;234m'
 BG_CARD='\033[48;5;236m'
-BG_ACCENT='\033[48;5;17m'
-BG_GREEN='\033[48;5;22m'
-BG_RED='\033[48;5;52m'
 
 hide_cursor()  { tput civis 2>/dev/null || true; }
 show_cursor()  { tput cnorm 2>/dev/null || true; }
-save_pos()     { tput sc   2>/dev/null || true; }
-restore_pos()  { tput rc   2>/dev/null || true; }
-clear_line()   { tput el   2>/dev/null || true; }
-move_up()      { tput cuu "${1:-1}" 2>/dev/null || true; }
 clear_screen() { tput clear 2>/dev/null || clear; }
 
-trap 'show_cursor; echo -e "${C_RESET}"' EXIT INT TERM
-
-SPIN_BRAILLE=('\u280b' '\u2819' '\u2839' '\u2838' '\u283c' '\u2834' '\u2826' '\u2827' '\u2807' '\u280f')
-SPIN_CIRCLE=('\u25d0' '\u25d3' '\u25d1' '\u25d2')
+trap 'show_cursor; printf "\033[0m"' EXIT INT TERM
 
 spin_run() {
   local msg="$1"; shift
-  local frames=("${SPIN_BRAILLE[@]}")
+  local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
   local colors=("$C_BLUE" "$C_CYAN" "$C_TEAL" "$C_MINT" "$C_GREEN" "$C_LIME" "$C_YELLOW" "$C_GOLD" "$C_ORANGE" "$C_PINK" "$C_PURPLE" "$C_VIOLET")
   local i=0 ci=0 pid
 
   hide_cursor
-  ("$@") &>/tmp/hp_prep_spin_out 2>&1 &
+  ("$@") >/tmp/hp_prep_out 2>&1 &
   pid=$!
 
   while kill -0 "$pid" 2>/dev/null; do
@@ -74,15 +56,15 @@ spin_run() {
   done
 
   wait "$pid"
-  local exit_code=$?
-  if [[ $exit_code -eq 0 ]]; then
-    printf "\r  ${C_GREEN}\u2713${C_RESET}  ${C_WHITE}${msg}${C_RESET}$(printf '%*s' 20 '')\n"
+  local rc=$?
+  if [[ $rc -eq 0 ]]; then
+    printf "\r  ${C_GREEN}✓${C_RESET}  ${C_WHITE}${msg}${C_RESET}%20s\n" ""
   else
-    printf "\r  ${C_RED}\u2717${C_RESET}  ${C_WHITE}${msg}${C_RESET} ${C_DIM}(exit ${exit_code})${C_RESET}\n"
-    head -5 /tmp/hp_prep_spin_out 2>/dev/null | sed 's/^/      /' || true
+    printf "\r  ${C_RED}✗${C_RESET}  ${C_WHITE}${msg}${C_RESET} ${C_DIM}(exit ${rc})${C_RESET}\n"
+    head -5 /tmp/hp_prep_out 2>/dev/null | sed 's/^/      /' || true
   fi
   show_cursor
-  return $exit_code
+  return $rc
 }
 
 progress_bar() {
@@ -92,13 +74,13 @@ progress_bar() {
   local bar=""
   for ((j=0; j<filled; j++)); do
     local ratio=$(( j * 100 / width ))
-    if   (( ratio < 33 )); then bar+="${C_BLUE}\u2588${C_RESET}"
-    elif (( ratio < 66 )); then bar+="${C_CYAN}\u2588${C_RESET}"
-    else                        bar+="${C_MINT}\u2588${C_RESET}"
+    if   (( ratio < 33 )); then bar+="${C_BLUE}█${C_RESET}"
+    elif (( ratio < 66 )); then bar+="${C_CYAN}█${C_RESET}"
+    else                        bar+="${C_MINT}█${C_RESET}"
     fi
   done
-  for ((j=0; j<empty; j++)); do bar+="${C_DARKGRAY}\u2591${C_RESET}"; done
-  printf "  [%s] ${C_SILVER}%3d%%${C_RESET}  ${C_DIM}%s${C_RESET}\n" "$bar" "$pct" "$label"
+  for ((j=0; j<empty; j++)); do bar+="${C_DARKGRAY}░${C_RESET}"; done
+  printf "  [%b] ${C_SILVER}%3d%%${C_RESET}  ${C_DIM}%s${C_RESET}\n" "$bar" "$pct" "$label"
 }
 
 animated_progress_bar() {
@@ -125,16 +107,8 @@ typewrite() {
   echo ""
 }
 
-fadein_line() {
-  local text="$1"
-  printf "${C_DARKGRAY}%s${C_RESET}\r" "$text"; sleep 0.05
-  printf "${C_GRAY}%s${C_RESET}\r"     "$text"; sleep 0.05
-  printf "${C_SILVER}%s${C_RESET}\r"   "$text"; sleep 0.05
-  printf "${C_WHITE}%s${C_RESET}\n"    "$text"
-}
-
 hrule() {
-  local char="${1:\u2500}" width=$(( COLS > 72 ? 72 : COLS ))
+  local char="${1:--}" width=$(( COLS > 72 ? 72 : COLS ))
   local line=""
   local colors=("$C_BLUE" "$C_CYAN" "$C_TEAL" "$C_MINT" "$C_GREEN" "$C_LIME" "$C_YELLOW" "$C_GOLD" "$C_ORANGE" "$C_PINK" "$C_PURPLE" "$C_VIOLET" "$C_BLUE")
   local nc=${#colors[@]}
@@ -151,31 +125,33 @@ glass_card() {
   local w=60
   local pad=$(( (COLS - w) / 2 ))
   [[ $pad -lt 0 ]] && pad=0
-  local indent=$(printf '%*s' "$pad" '')
+  local indent
+  indent=$(printf '%*s' "$pad" '')
 
   echo ""
-  echo -e "${indent}${C_DARKGRAY}\u256d$(printf '\u2500%.0s' $(seq 1 $((w-2))))\u256e${C_RESET}"
-  echo -e "${indent}${C_DARKGRAY}\u2502${C_RESET}${BG_CARD}  ${C_CYAN}${C_BOLD}${title}$(printf '%*s' $((w-4-${#title})) '')${C_RESET}${C_DARKGRAY}  \u2502${C_RESET}"
-  echo -e "${indent}${C_DARKGRAY}\u251c$(printf '\u2500%.0s' $(seq 1 $((w-2))))\u2524${C_RESET}"
+  echo -e "${indent}${C_DARKGRAY}╭$(printf '─%.0s' $(seq 1 $((w-2))))╮${C_RESET}"
+  echo -e "${indent}${C_DARKGRAY}│${C_RESET}${BG_CARD}  ${C_CYAN}${C_BOLD}${title}$(printf '%*s' $((w-4-${#title})) '')${C_RESET}${C_DARKGRAY}  │${C_RESET}"
+  echo -e "${indent}${C_DARKGRAY}├$(printf '─%.0s' $(seq 1 $((w-2))))┤${C_RESET}"
   for line in "${body[@]}"; do
-    local stripped; stripped=$(echo -e "$line" | sed 's/\x1B\[[0-9;]*m//g')
-    local visible_len=${#stripped}
-    local padding=$(( w - 4 - visible_len ))
+    local stripped
+    stripped=$(echo "$line" | sed 's/\x1B\[[0-9;]*m//g')
+    local vlen=${#stripped}
+    local padding=$(( w - 4 - vlen ))
     [[ $padding -lt 0 ]] && padding=0
-    echo -e "${indent}${C_DARKGRAY}\u2502${C_RESET}${BG_CARD}  ${line}$(printf '%*s' "$padding" '')${C_RESET}${C_DARKGRAY}  \u2502${C_RESET}"
+    echo -e "${indent}${C_DARKGRAY}│${C_RESET}${BG_CARD}  ${line}$(printf '%*s' "$padding" '')${C_RESET}${C_DARKGRAY}  │${C_RESET}"
   done
-  echo -e "${indent}${C_DARKGRAY}\u2570$(printf '\u2500%.0s' $(seq 1 $((w-2))))\u256f${C_RESET}"
+  echo -e "${indent}${C_DARKGRAY}╰$(printf '─%.0s' $(seq 1 $((w-2))))╯${C_RESET}"
   echo ""
 }
 
 toast() {
   local type="$1" msg="$2"
   case "$type" in
-    ok)   local icon="\u2713" color="$C_GREEN"  label="Done"    ;;
-    warn) local icon="\u26a0" color="$C_YELLOW" label="Warning" ;;
-    err)  local icon="\u2717" color="$C_RED"    label="Error"   ;;
-    info) local icon="\u2139" color="$C_CYAN"   label="Info"    ;;
-    *)    local icon="\u00b7" color="$C_WHITE"  label=""        ;;
+    ok)   local icon="✓" color="$C_GREEN"  label="Done"    ;;
+    warn) local icon="⚠" color="$C_YELLOW" label="Warning" ;;
+    err)  local icon="✗" color="$C_RED"    label="Error"   ;;
+    info) local icon="ℹ" color="$C_CYAN"   label="Info"    ;;
+    *)    local icon="·" color="$C_WHITE"  label=""        ;;
   esac
   echo -e "  ${color}${C_BOLD}${icon}  ${label}${C_RESET}  ${C_SILVER}${msg}${C_RESET}"
 }
@@ -194,14 +170,14 @@ check_deps() {
 confirm() {
   local msg="$1"
   echo ""
-  echo -ne "  ${C_GOLD}\u25c6${C_RESET}  ${C_WHITE}${msg}${C_RESET} ${C_DIM}[y/N]${C_RESET}  "
+  echo -ne "  ${C_GOLD}◆${C_RESET}  ${C_WHITE}${msg}${C_RESET} ${C_DIM}[y/N]${C_RESET}  "
   read -r ans
   [[ "${ans,,}" == "y" ]]
 }
 
 press_enter() {
   echo ""
-  hrule "\u00b7"
+  hrule "·"
   echo -ne "  ${C_DIM}Press ENTER to return to menu...${C_RESET}"
   read -r
 }
@@ -210,18 +186,16 @@ draw_main_banner() {
   clear_screen
   if command -v figlet &>/dev/null; then
     hide_cursor
-    local banner_colors=("$C_CYAN" "$C_TEAL" "$C_MINT" "$C_GREEN" "$C_CYAN")
-    for bc in "${banner_colors[@]}"; do
+    for bc in "$C_CYAN" "$C_TEAL" "$C_MINT" "$C_GREEN" "$C_CYAN"; do
       clear_screen
       echo ""
       figlet -f big "HP  PREP  KIT" | sed "s/^/  /" | while IFS= read -r line; do
         echo -e "${bc}${line}${C_RESET}"
       done
-      if command -v toilet &>/dev/null; then
+      command -v toilet &>/dev/null && \
         toilet -f future "  VibeCodingLabs" | while IFS= read -r line; do
           echo -e "${C_PURPLE}${line}${C_RESET}"
-        done
-      fi
+        done || true
       sleep 0.1
     done
     clear_screen
@@ -236,9 +210,9 @@ draw_main_banner() {
     fi
     echo ""
     if command -v toilet &>/dev/null && command -v lolcat &>/dev/null; then
-      toilet -f future "  \u2726  VibeCodingLabs  \u2726" | lolcat
+      toilet -f future "  VibeCodingLabs" | lolcat
     else
-      echo -e "${C_PURPLE}${C_BOLD}  \u2726  VibeCodingLabs  \u2726${C_RESET}"
+      echo -e "${C_PURPLE}${C_BOLD}  ✦  VibeCodingLabs  ✦${C_RESET}"
     fi
     show_cursor
   else
@@ -248,34 +222,32 @@ draw_main_banner() {
       clear_screen
       echo ""
       echo -e "${bc}${C_BOLD}"
-      cat << 'ASCIIART'
-  \u2588\u2588\u2557  \u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2557     \u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557\u2588\u2588\u2588\u2588\u2588\u2588\u2557
-  \u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557    \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557
-  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d    \u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d\u2588\u2588\u2588\u2588\u2588\u2557  \u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d
-  \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2551\u2588\u2588\u2554\u2550\u2550\u2550\u255d     \u2588\u2588\u2554\u2550\u2550\u2550\u255d \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557\u2588\u2588\u2554\u2550\u2550\u255d  \u2588\u2588\u2554\u2550\u2550\u2550\u255d
-  \u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2551         \u2588\u2588\u2551     \u2588\u2588\u2551  \u2588\u2588\u2551\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557\u2588\u2588\u2551
-  \u255a\u2550\u255d  \u255a\u2550\u255d\u255a\u2550\u255d         \u255a\u2550\u255d     \u255a\u2550\u255d  \u255a\u2550\u255d\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u255d\u255a\u2550\u255d
-ASCIIART
+      echo '  ██╗  ██╗██████╗     ██████╗ ██████╗ ███████╗██████╗'
+      echo '  ██║  ██║██╔══██╗    ██╔══██╗██╔══██╗██╔════╝██╔══██╗'
+      echo '  ███████║██████╔╝    ██████╔╝██████╔╝█████╗  ██████╔╝'
+      echo '  ██╔══██║██╔═══╝     ██╔═══╝ ██╔══██╗██╔══╝  ██╔═══╝'
+      echo '  ██║  ██║██║         ██║     ██║  ██║███████╗██║'
+      echo '  ╚═╝  ╚═╝╚═╝         ╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝'
       echo -e "${C_RESET}"
       sleep 0.1
     done
     show_cursor
-    echo -e "${C_PURPLE}${C_BOLD}  \u2726  VibeCodingLabs  \u2726  Ubuntu Laptop Prep Kit${C_RESET}"
+    echo -e "${C_PURPLE}${C_BOLD}  ✦  VibeCodingLabs  ✦  Ubuntu Laptop Prep Kit${C_RESET}"
   fi
   echo ""
-  hrule "\u2500"
+  hrule "-"
   echo ""
   printf "  "
-  typewrite "${C_SILVER}Ubuntu Laptop Prep Kit  \u00b7  Secure  \u00b7  Beautiful  \u00b7  Ready to Sell${C_RESET}" 0.015
+  typewrite "Ubuntu Laptop Prep Kit  ·  Secure  ·  Beautiful  ·  Ready to Sell" 0.015
   echo ""
-  hrule "\u2500"
+  hrule "-"
   echo ""
 }
 
 section_banner() {
-  local title="$1" icon="${2:\u25b6}"
+  local title="$1" icon="${2:-▶}"
   echo ""
-  hrule "\u254c"
+  hrule "─"
   echo ""
   if command -v figlet &>/dev/null && command -v lolcat &>/dev/null; then
     figlet -f small "  $title" | lolcat -a -d 1 -s 80 2>/dev/null || \
@@ -288,7 +260,7 @@ section_banner() {
     echo -e "  ${C_CYAN}${C_BOLD}${icon}  ${title}${C_RESET}"
   fi
   echo ""
-  hrule "\u254c"
+  hrule "─"
   echo ""
 }
 
@@ -303,41 +275,41 @@ module_sysinfo() {
   kernel=$(uname -r 2>/dev/null)
 
   glass_card "  Hardware Overview" \
-    "${C_CYAN}CPU   ${C_RESET}${C_WHITE}${cpu_model}${C_RESET}" \
-    "${C_CYAN}Cores ${C_RESET}${C_WHITE}${cpu_cores} logical processors${C_RESET}" \
-    "${C_CYAN}RAM   ${C_RESET}${C_WHITE}${mem_total} total${C_RESET}" \
-    "${C_CYAN}Disk  ${C_RESET}${C_WHITE}${disk_info}${C_RESET}" \
-    "${C_CYAN}OS    ${C_RESET}${C_WHITE}${os_ver}${C_RESET}" \
-    "${C_CYAN}Kern  ${C_RESET}${C_WHITE}${kernel}${C_RESET}"
+    "CPU    ${cpu_model}" \
+    "Cores  ${cpu_cores} logical processors" \
+    "RAM    ${mem_total} total" \
+    "Disk   ${disk_info}" \
+    "OS     ${os_ver}" \
+    "Kernel ${kernel}"
 
-  echo -e "  ${C_GOLD}${C_BOLD}  CPU Vulnerabilities${C_RESET}"
+  echo -e "  ${C_GOLD}${C_BOLD}CPU Vulnerabilities${C_RESET}"
   echo ""
   if [[ -d /sys/devices/system/cpu/vulnerabilities ]]; then
     for f in /sys/devices/system/cpu/vulnerabilities/*; do
-      local vuln_name status
-      vuln_name=$(basename "$f")
+      local vname status
+      vname=$(basename "$f")
       status=$(cat "$f" 2>/dev/null || echo "unknown")
       if echo "$status" | grep -qi "not affected\|mitigated"; then
-        echo -e "  ${C_GREEN}\u2713${C_RESET}  ${C_DIM}${vuln_name}${C_RESET}  ${C_GREEN}${status}${C_RESET}"
+        echo -e "  ${C_GREEN}✓${C_RESET}  ${C_DIM}${vname}${C_RESET}  ${C_GREEN}${status}${C_RESET}"
       elif echo "$status" | grep -qi "vulnerable"; then
-        echo -e "  ${C_RED}\u2717${C_RESET}  ${C_WHITE}${vuln_name}${C_RESET}  ${C_RED}${C_BOLD}${status}${C_RESET}"
+        echo -e "  ${C_RED}✗${C_RESET}  ${C_WHITE}${vname}${C_RESET}  ${C_RED}${C_BOLD}${status}${C_RESET}"
       else
-        echo -e "  ${C_YELLOW}\u25cc${C_RESET}  ${C_DIM}${vuln_name}${C_RESET}  ${C_YELLOW}${status}${C_RESET}"
+        echo -e "  ${C_YELLOW}◌${C_RESET}  ${C_DIM}${vname}${C_RESET}  ${C_YELLOW}${status}${C_RESET}"
       fi
     done
   else
     local bugs
     bugs=$(grep -m1 "^bugs" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs)
-    [[ -n "$bugs" ]] && echo -e "  ${C_YELLOW}\u26a0${C_RESET}  ${C_WHITE}Hardware flags: ${C_ORANGE}${bugs}${C_RESET}" \
+    [[ -n "$bugs" ]] && echo -e "  ${C_YELLOW}⚠${C_RESET}  Hardware flags: ${C_ORANGE}${bugs}${C_RESET}" \
       || toast ok "No vulnerability flags detected."
   fi
 
   echo ""
-  echo -e "  ${C_GOLD}${C_BOLD}  GPU${C_RESET}"
+  echo -e "  ${C_GOLD}${C_BOLD}GPU${C_RESET}"
   echo ""
   lspci 2>/dev/null | grep -iE "vga|3d|display" | while IFS= read -r line; do
-    echo -e "  ${C_VIOLET}\u25aa${C_RESET}  ${C_SILVER}${line}${C_RESET}"
-  done || echo -e "  ${C_DIM}  No GPU detected via lspci${C_RESET}"
+    echo -e "  ${C_VIOLET}▪${C_RESET}  ${C_SILVER}${line}${C_RESET}"
+  done || echo -e "  ${C_DIM}No GPU detected via lspci${C_RESET}"
 
   press_enter
 }
@@ -370,8 +342,8 @@ module_system_update() {
 module_security_harden() {
   section_banner "SECURITY"
   toast info "Configuring firewall..."
-  spin_run "Enabling UFW"                  sudo ufw --force enable
-  spin_run "Setting default deny inbound"  sudo ufw default deny incoming
+  spin_run "Enabling UFW"                   sudo ufw --force enable
+  spin_run "Setting default deny inbound"   sudo ufw default deny incoming
   spin_run "Setting default allow outbound" sudo ufw default allow outgoing
   toast ok "Firewall active."
   toast info "Configuring automatic security updates..."
@@ -391,7 +363,7 @@ module_security_harden() {
   echo ""
   if command -v spectre-meltdown-checker &>/dev/null; then
     sudo spectre-meltdown-checker --quiet 2>/dev/null \
-      || toast warn "Some mitigations incomplete."
+      || toast warn "Some mitigations may be incomplete."
     toast ok "Spectre/Meltdown audit complete."
   else
     toast warn "spectre-meltdown-checker not in repos. Check /sys/devices/system/cpu/vulnerabilities/ manually."
@@ -402,11 +374,11 @@ module_security_harden() {
 module_privacy_wipe() {
   section_banner "PRIVACY"
   glass_card "  Privacy Wipe" \
-    "${C_YELLOW}This removes your personal data.${C_RESET}" \
-    "${C_DIM}The OS and installed apps stay intact.${C_RESET}" \
+    "This removes your personal data." \
+    "The OS and installed apps stay intact." \
     "" \
-    "${C_DIM}Covers: shell history, SSH/GPG keys,${C_RESET}" \
-    "${C_DIM}browser data, .env files, trash, cache.${C_RESET}"
+    "Covers: shell history, SSH/GPG keys," \
+    "browser data, .env files, trash, cache."
   confirm "Proceed with privacy wipe?" || { toast info "Skipped."; press_enter; return; }
   echo ""
   spin_run "Clearing shell history" bash -c "history -c 2>/dev/null; rm -f ~/.bash_history ~/.zsh_history ~/.local/share/recently-used.xbel"
@@ -416,8 +388,8 @@ module_privacy_wipe() {
   if confirm "Remove ~/.gnupg (GPG keys)?"; then
     spin_run "Wiping GPG keys" rm -rf ~/.gnupg
   fi
-  spin_run "Clearing Firefox data"  bash -c "rm -rf ~/.mozilla/firefox/*.default*/sessionstore* ~/.mozilla/firefox/*.default*/cookies.sqlite ~/.mozilla/firefox/*.default*/places.sqlite ~/.mozilla/firefox/*.default*/formhistory.sqlite 2>/dev/null || true"
-  spin_run "Clearing Chrome data"   bash -c "rm -rf ~/.config/google-chrome/Default/Cookies ~/.config/google-chrome/Default/History ~/.config/chromium/Default/Cookies ~/.config/chromium/Default/History 2>/dev/null || true"
+  spin_run "Clearing Firefox data"    bash -c "rm -rf ~/.mozilla/firefox/*.default*/sessionstore* ~/.mozilla/firefox/*.default*/cookies.sqlite ~/.mozilla/firefox/*.default*/places.sqlite ~/.mozilla/firefox/*.default*/formhistory.sqlite 2>/dev/null || true"
+  spin_run "Clearing Chrome data"     bash -c "rm -rf ~/.config/google-chrome/Default/Cookies ~/.config/google-chrome/Default/History ~/.config/chromium/Default/Cookies ~/.config/chromium/Default/History 2>/dev/null || true"
   spin_run "Emptying thumbnail cache" bash -c "rm -rf ~/.cache/thumbnails/* 2>/dev/null || true"
   spin_run "Emptying trash"           bash -c "rm -rf ~/.local/share/Trash/files/* ~/.local/share/Trash/info/* 2>/dev/null || true"
   toast info "Scanning for .env / secret files (depth 3)..."
@@ -435,16 +407,16 @@ module_privacy_wipe() {
 
 module_beautify() {
   section_banner "BEAUTIFY"
-  spin_run "Installing GNOME Tweaks"       sudo apt-get install -y gnome-tweaks gnome-shell-extensions -qq
-  spin_run "Adding Papirus PPA"            sudo add-apt-repository -y ppa:papirus/papirus || true
-  spin_run "Refreshing package index"      sudo apt-get update -qq
-  spin_run "Installing Papirus icons"      sudo apt-get install -y papirus-icon-theme -qq
-  spin_run "Installing wallpaper packs"    bash -c "sudo apt-get install -y gnome-backgrounds ubuntu-wallpapers* -qq 2>/dev/null || true"
+  spin_run "Installing GNOME Tweaks"    sudo apt-get install -y gnome-tweaks gnome-shell-extensions -qq
+  spin_run "Adding Papirus PPA"         sudo add-apt-repository -y ppa:papirus/papirus || true
+  spin_run "Refreshing package index"   sudo apt-get update -qq
+  spin_run "Installing Papirus icons"   sudo apt-get install -y papirus-icon-theme -qq
+  spin_run "Installing wallpaper packs" bash -c "sudo apt-get install -y gnome-backgrounds ubuntu-wallpapers* -qq 2>/dev/null || true"
   toast info "Applying desktop settings..."
-  spin_run "Setting Papirus icons"    gsettings set org.gnome.desktop.interface icon-theme 'Papirus' || true
-  spin_run "Enabling dark mode"       gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
-  spin_run "Showing battery %"        gsettings set org.gnome.desktop.interface show-battery-percentage true || true
-  spin_run "Setting font"             gsettings set org.gnome.desktop.interface font-name 'Cantarell 11' || true
+  spin_run "Setting Papirus icons"  gsettings set org.gnome.desktop.interface icon-theme 'Papirus' || true
+  spin_run "Enabling dark mode"     gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' || true
+  spin_run "Showing battery %"      gsettings set org.gnome.desktop.interface show-battery-percentage true || true
+  spin_run "Setting font"           gsettings set org.gnome.desktop.interface font-name 'Cantarell 11' || true
   toast info "Setting wallpaper..."
   local wp
   wp=$(find /usr/share/backgrounds -name "*.jpg" -o -name "*.png" 2>/dev/null | shuf | head -1)
@@ -463,9 +435,9 @@ module_beautify() {
 module_new_user() {
   section_banner "NEW USER"
   glass_card "  Create Buyer Account" \
-    "${C_DIM}Creates a clean sudo user for the new owner.${C_RESET}" \
-    "${C_DIM}Password expires on first login so they${C_RESET}" \
-    "${C_DIM}can set their own on first boot.${C_RESET}"
+    "Creates a clean sudo user for the new owner." \
+    "Password expires on first login so they" \
+    "can set their own on first boot."
   confirm "Create a new buyer account?" || { toast info "Skipped."; press_enter; return; }
   echo -ne "  ${C_CYAN}Username:${C_RESET}  "
   read -r newuser
@@ -476,19 +448,19 @@ module_new_user() {
     || { toast warn "User '$newuser' may already exist."; press_enter; return; }
   echo "$newuser:$newpass" | sudo chpasswd
   sudo passwd --expire "$newuser" 2>/dev/null || true
-  toast ok "User '${newuser}' created \u2014 password expires on first login."
+  toast ok "User '${newuser}' created — password expires on first login."
   press_enter
 }
 
 module_full_run() {
   section_banner "FULL PREP"
   glass_card "  Full Prep Sequence" \
-    "${C_DIM}Runs all modules in order:${C_RESET}" \
+    "Runs all modules in order:" \
     "" \
-    "  ${C_CYAN}1${C_RESET}  System Update" \
-    "  ${C_CYAN}2${C_RESET}  Security Hardening" \
-    "  ${C_CYAN}3${C_RESET}  Privacy Wipe" \
-    "  ${C_CYAN}4${C_RESET}  Beautify Desktop"
+    "  1  System Update" \
+    "  2  Security Hardening" \
+    "  3  Privacy Wipe" \
+    "  4  Beautify Desktop"
   confirm "Run full prep sequence now?" || { toast info "Cancelled."; press_enter; return; }
   module_system_update
   module_security_harden
@@ -497,10 +469,10 @@ module_full_run() {
   section_banner "COMPLETE"
   echo ""
   echo -e "  ${C_GREEN}${C_BOLD}"
-  typewrite "  \u2726  This HP is fully prepped and ready for its new owner.  \u2726" 0.02
+  typewrite "  ✦  This HP is fully prepped and ready for its new owner.  ✦" 0.02
   echo -e "${C_RESET}"
   echo ""
-  hrule "\u2550"
+  hrule "="
   press_enter
 }
 
@@ -511,22 +483,22 @@ main_menu() {
     local pad="  "
     echo -e "${pad}${C_BOLD}${C_WHITE}  Select a module:${C_RESET}"
     echo ""
-    echo -e "${pad}${BG_CARD}                                                    ${C_RESET}"
-    echo -e "${pad}${BG_CARD}  ${C_GREEN}${C_BOLD}[1]${C_RESET}${BG_CARD}  ${C_WHITE}System Info         ${C_GRAY}specs \u00b7 vulns \u00b7 mitigations  ${C_RESET}${BG_CARD}${C_RESET}"
+    echo -e "${pad}${BG_CARD}                                                      ${C_RESET}"
+    echo -e "${pad}${BG_CARD}  ${C_GREEN}${C_BOLD}[1]${C_RESET}${BG_CARD}  ${C_WHITE}System Info         ${C_GRAY}specs · vulns · mitigations   ${C_RESET}${BG_CARD}${C_RESET}"
     echo -e "${pad}${BG_CARD}  ${C_CYAN}${C_BOLD}[2]${C_RESET}${BG_CARD}  ${C_WHITE}System Update       ${C_GRAY}apt full-upgrade + firmware   ${C_RESET}${BG_CARD}${C_RESET}"
-    echo -e "${pad}${BG_CARD}  ${C_PURPLE}${C_BOLD}[3]${C_RESET}${BG_CARD}  ${C_WHITE}Security Hardening  ${C_GRAY}UFW \u00b7 ClamAV \u00b7 Meltdown      ${C_RESET}${BG_CARD}${C_RESET}"
-    echo -e "${pad}${BG_CARD}  ${C_YELLOW}${C_BOLD}[4]${C_RESET}${BG_CARD}  ${C_WHITE}Privacy Wipe        ${C_GRAY}history \u00b7 SSH \u00b7 browser \u00b7 .env ${C_RESET}${BG_CARD}${C_RESET}"
-    echo -e "${pad}${BG_CARD}  ${C_PINK}${C_BOLD}[5]${C_RESET}${BG_CARD}  ${C_WHITE}Beautify Desktop    ${C_GRAY}Papirus \u00b7 wallpaper \u00b7 dark    ${C_RESET}${BG_CARD}${C_RESET}"
-    echo -e "${pad}${BG_CARD}  ${C_SILVER}${C_BOLD}[6]${C_RESET}${BG_CARD}  ${C_WHITE}Create Buyer User   ${C_GRAY}new account \u00b7 force pw change ${C_RESET}${BG_CARD}${C_RESET}"
-    echo -e "${pad}${BG_CARD}                                                    ${C_RESET}"
+    echo -e "${pad}${BG_CARD}  ${C_PURPLE}${C_BOLD}[3]${C_RESET}${BG_CARD}  ${C_WHITE}Security Hardening  ${C_GRAY}UFW · ClamAV · Meltdown check ${C_RESET}${BG_CARD}${C_RESET}"
+    echo -e "${pad}${BG_CARD}  ${C_YELLOW}${C_BOLD}[4]${C_RESET}${BG_CARD}  ${C_WHITE}Privacy Wipe        ${C_GRAY}history · SSH · browser · env ${C_RESET}${BG_CARD}${C_RESET}"
+    echo -e "${pad}${BG_CARD}  ${C_PINK}${C_BOLD}[5]${C_RESET}${BG_CARD}  ${C_WHITE}Beautify Desktop    ${C_GRAY}Papirus · wallpaper · dark    ${C_RESET}${BG_CARD}${C_RESET}"
+    echo -e "${pad}${BG_CARD}  ${C_SILVER}${C_BOLD}[6]${C_RESET}${BG_CARD}  ${C_WHITE}Create Buyer User   ${C_GRAY}new account · force pw change ${C_RESET}${BG_CARD}${C_RESET}"
+    echo -e "${pad}${BG_CARD}                                                      ${C_RESET}"
     echo ""
-    echo -e "${pad}  ${C_ORANGE}${C_BOLD}[A]${C_RESET}  ${C_BOLD}${C_WHITE}FULL PREP${C_RESET} \u2014 Run All Modules  ${C_DIM}\u2190 recommended${C_RESET}"
+    echo -e "${pad}  ${C_ORANGE}${C_BOLD}[A]${C_RESET}  ${C_BOLD}${C_WHITE}FULL PREP${C_RESET} — Run All Modules  ${C_DIM}← recommended${C_RESET}"
     echo ""
     echo -e "${pad}  ${C_DIM}[Q]  Quit${C_RESET}"
     echo ""
-    hrule "\u2500"
+    hrule "-"
     echo ""
-    echo -ne "  ${C_GOLD}\u25c6${C_RESET}  ${C_BOLD}Choice:${C_RESET}  "
+    echo -ne "  ${C_GOLD}◆${C_RESET}  ${C_BOLD}Choice:${C_RESET}  "
     read -r choice
     case "${choice,,}" in
       1) module_sysinfo ;;
@@ -545,13 +517,13 @@ main_menu() {
           echo -e "  ${C_CYAN}${C_BOLD}Goodbye!${C_RESET}"
         fi
         echo ""
-        echo -e "  ${C_DIM}VibeCodingLabs \u00b7 Phoenix, AZ${C_RESET}"
+        echo -e "  ${C_DIM}VibeCodingLabs · Phoenix, AZ${C_RESET}"
         echo ""
         show_cursor
         exit 0
         ;;
       *)
-        toast warn "Invalid option \u2014 press 1-6, A, or Q."
+        toast warn "Invalid option — press 1-6, A, or Q."
         sleep 1
         ;;
     esac
@@ -559,7 +531,7 @@ main_menu() {
 }
 
 if [[ $EUID -ne 0 ]]; then
-  echo -e "\033[1;33m  Note: Some modules require sudo \u2014 you will be prompted as needed.\033[0m"
+  echo -e "\033[1;33m  Note: Some modules require sudo — you will be prompted as needed.\033[0m"
   sleep 1
 fi
 
