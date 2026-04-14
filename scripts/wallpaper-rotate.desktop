@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Wallpaper Rotator
+Comment=Rotate B-roll wallpapers every 3 minutes via xfconf-query
+Exec=%h/.local/bin/rotate_wallpapers_xfce.sh
+X-XFCE-Autostart-enabled=true
+X-GNOME-Autostart-enabled=true
+NoDisplay=false

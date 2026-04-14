@@ -1,0 +1,14 @@
+[Unit]
+Description=HP Prep Kit - First-boot account setup (runs once)
+After=graphical.target
+ConditionPathExists=!/etc/hp-prep/firstboot-done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/firstboot-setup-xfce.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical.target
