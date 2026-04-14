@@ -1,22 +1,38 @@
-# HP Ubuntu Prep Kit
+# HP Ubuntu Prep Kit v2
 
-> **by VibeCodingLabs** — Prep any Ubuntu laptop for resale in minutes.
+> **by VibeCodingLabs** — macOS-inspired interactive TUI for prepping Ubuntu laptops for resale.
 
-Interactive CLI tool with animated figlet banners, color menus, and step-by-step modules to make a used HP (or any Ubuntu laptop) **secure, clean, and beautiful** for a non-technical buyer.
+[![bash](https://img.shields.io/badge/shell-bash-blue?style=flat-square)](https://www.gnu.org/software/bash/)
+[![ubuntu](https://img.shields.io/badge/Ubuntu-24.04%2B-orange?style=flat-square&logo=ubuntu)](https://ubuntu.com)
+[![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 ---
 
-## Features
+## What's New in v2
 
-| Module | What it does |
-|--------|-------------|
-| **System Info** | Specs, CPU vuln flags, mitigation status |
-| **System Update** | `apt full-upgrade` + firmware via `fwupdmgr` |
-| **Security Hardening** | UFW firewall, auto-updates, ClamAV, Spectre/Meltdown check |
-| **Privacy Wipe** | Shell history, SSH keys, browser data, `.env` files |
-| **Beautify Desktop** | Papirus icons, wallpapers, dark mode, fonts |
-| **Create Buyer Account** | New user with forced password change on first login |
-| **Full Prep** | Runs all of the above in sequence |
+- **macOS-style UX** — frosted glass cards, gradient rules, toast notifications
+- **Animated spinners** — braille/circle spinner with rainbow color cycling per operation
+- **Animated progress bars** — gradient blue→cyan→green fill with percentage
+- **Rotating logo** — banner color-cycles through cyan/teal/mint/green on startup
+- **Typewriter effect** — taglines and completion messages animate letter by letter
+- **Fade-in transitions** — section headers fade in with dim→silver→white steps
+- **figlet + lolcat + toilet** — huge animated ASCII banners, auto-installed
+- **Gradient horizontal rules** — dividers that shift colors across the terminal width
+- **Glass card panels** — bordered info boxes for hardware overview and module descriptions
+
+---
+
+## Modules
+
+| # | Module | What it does |
+|---|--------|-------------|
+| 1 | **System Info** | CPU, RAM, disk, GPU, per-vulnerability mitigation status |
+| 2 | **System Update** | `apt full-upgrade` + `fwupdmgr` firmware with animated progress |
+| 3 | **Security Hardening** | UFW, auto-updates, ClamAV, Spectre/Meltdown check |
+| 4 | **Privacy Wipe** | Shell history, SSH/GPG, Firefox/Chrome, .env scanner |
+| 5 | **Beautify Desktop** | Papirus icons, wallpapers, dark mode, battery % |
+| 6 | **Create Buyer Account** | New user, forced password expire on first login |
+| **A** | **Full Prep** | Runs all modules in sequence |
 
 ---
 
@@ -29,40 +45,33 @@ chmod +x prep.sh
 ./prep.sh
 ```
 
-Dependencies (auto-installed on first run):
-- `figlet` — big ASCII banners
-- `lolcat` — rainbow color output
-- `toilet` — styled font banners
+Auto-installs on first run: `figlet` · `lolcat` · `toilet` · `bc`
 
 ---
 
-## Usage
+## Requirements
 
-Launch the interactive menu:
-
-```bash
-./prep.sh
-```
+- Ubuntu 22.04+ / Debian 12+ with GNOME desktop
+- `bash` 4.x+
+- Terminal with 256-color support (GNOME Terminal, Kitty, Alacritty, WezTerm)
 
 ---
 
-## OEM Reinstall (Recommended before selling)
+## OEM Install (Recommended)
 
-For a fully clean slate, boot from Ubuntu live USB and choose **"Install Ubuntu (OEM mode)"**. This lets the buyer create their own account on first boot. Run this kit on the new install before handing off.
+For a 100% clean handoff, boot Ubuntu live USB → **"Install Ubuntu (OEM mode)"** → run this kit after install. Buyer sets their own account on first boot.
 
 ---
 
-## Security Notes
+## Security
 
-- All destructive operations (privacy wipe, user deletion) require explicit `[y]` confirmation
-- The script never exfiltrates data — review `prep.sh` before running
-- `set -euo pipefail` enforced — fails fast on errors
-- All paths are quoted — no glob injection
+- `set -euo pipefail` — hard fail on errors
+- All destructive ops gate on explicit `[y]` confirmation
+- All paths quoted — no glob injection
+- Never exfiltrates data — audit `prep.sh` yourself
 
 ---
 
 ## License
 
-MIT — use freely, credit appreciated.
-
-**VibeCodingLabs** | Phoenix, AZ
+MIT — VibeCodingLabs · Phoenix, AZ
