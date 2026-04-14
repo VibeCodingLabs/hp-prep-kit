@@ -1,40 +1,6 @@
-# HP Ubuntu Prep Kit v2
+# 🔥 HP Prep Kit — v4
 
-> **by VibeCodingLabs** — macOS-inspired interactive TUI for prepping Ubuntu laptops for resale.
-
-[![bash](https://img.shields.io/badge/shell-bash-blue?style=flat-square)](https://www.gnu.org/software/bash/)
-[![ubuntu](https://img.shields.io/badge/Ubuntu-24.04%2B-orange?style=flat-square&logo=ubuntu)](https://ubuntu.com)
-[![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-
----
-
-## What's New in v2
-
-- **macOS-style UX** — frosted glass cards, gradient rules, toast notifications
-- **Animated spinners** — braille/circle spinner with rainbow color cycling per operation
-- **Animated progress bars** — gradient blue→cyan→green fill with percentage
-- **Rotating logo** — banner color-cycles through cyan/teal/mint/green on startup
-- **Typewriter effect** — taglines and completion messages animate letter by letter
-- **Fade-in transitions** — section headers fade in with dim→silver→white steps
-- **figlet + lolcat + toilet** — huge animated ASCII banners, auto-installed
-- **Gradient horizontal rules** — dividers that shift colors across the terminal width
-- **Glass card panels** — bordered info boxes for hardware overview and module descriptions
-
----
-
-## Modules
-
-| # | Module | What it does |
-|---|--------|-------------|
-| 1 | **System Info** | CPU, RAM, disk, GPU, per-vulnerability mitigation status |
-| 2 | **System Update** | `apt full-upgrade` + `fwupdmgr` firmware with animated progress |
-| 3 | **Security Hardening** | UFW, auto-updates, ClamAV, Spectre/Meltdown check |
-| 4 | **Privacy Wipe** | Shell history, SSH/GPG, Firefox/Chrome, .env scanner |
-| 5 | **Beautify Desktop** | Papirus icons, wallpapers, dark mode, battery % |
-| 6 | **Create Buyer Account** | New user, forced password expire on first login |
-| **A** | **Full Prep** | Runs all modules in sequence |
-
----
+**VibeCodingLabs** · Ubuntu laptop prep tool with animated TUI, macOS-inspired UI, and full seller/buyer workflow.
 
 ## Quick Start
 
@@ -45,33 +11,47 @@ chmod +x prep.sh
 ./prep.sh
 ```
 
-Auto-installs on first run: `figlet` · `lolcat` · `toilet` · `bc`
+## Menu
 
----
+| Key | Module | Description |
+|-----|--------|-------------|
+| `1` | System Info | CPU, RAM, disk, GPU, vulnerability status |
+| `2` | System Update | `apt full-upgrade` + firmware updates |
+| `3` | Security Hardening | UFW, ClamAV, auto-updates, Meltdown audit |
+| `4` | Privacy Wipe | Shell history, SSH/GPG, browser data, `.env` files |
+| `5` | Beautify Desktop | Xfce/GNOME auto-detect, Papirus icons, dark theme |
+| `6` | Create Buyer User | New sudo account, force password change on first login |
+| `7` | **Seller Seal** | Wallpaper rotator (cron), firstboot cleanup service, seal flag |
+| `8` | **Test Mode** | Verify all systems, accounts, mitigations |
+| `A` | **FULL PREP** | Runs all modules in sequence |
+| `Q` | Quit | |
+
+## Seller Workflow
+
+1. Run **[A] Full Prep** — does everything in order
+2. Or run individual modules then **[7] Seller Seal** to arm handoff
+3. Run **[8] Test Mode** to verify everything passed
+4. Hand off laptop — buyer account has expired password, firstboot service cleans up seller accounts
 
 ## Requirements
 
-- Ubuntu 22.04+ / Debian 12+ with GNOME desktop
-- `bash` 4.x+
-- Terminal with 256-color support (GNOME Terminal, Kitty, Alacritty, WezTerm)
+- Ubuntu 18.04+ (tested on 20.04 LTS Xfce)
+- `sudo` access
+- Internet connection for package installs
+
+## What Gets Installed
+
+- `figlet` `lolcat` `toilet` `bc` — TUI display tools
+- `papirus-icon-theme` — desktop icons
+- `clamav` `ufw` `unattended-upgrades` — security
+- `fwupd` — firmware updates
+- `/usr/local/bin/wallpaper-rotate.sh` — wallpaper rotator
+- `/etc/systemd/system/hp-prep-firstboot.service` — buyer firstboot cleanup
+
+## Error Handling
+
+All commands use `|| true` — no single failure kills the script. Errors are shown inline with ✗ toast notifications.
 
 ---
 
-## OEM Install (Recommended)
-
-For a 100% clean handoff, boot Ubuntu live USB → **"Install Ubuntu (OEM mode)"** → run this kit after install. Buyer sets their own account on first boot.
-
----
-
-## Security
-
-- `set -euo pipefail` — hard fail on errors
-- All destructive ops gate on explicit `[y]` confirmation
-- All paths quoted — no glob injection
-- Never exfiltrates data — audit `prep.sh` yourself
-
----
-
-## License
-
-MIT — VibeCodingLabs · Phoenix, AZ
+*VibeCodingLabs · Phoenix, AZ*
